@@ -1,0 +1,107 @@
+services:
+
+  vistaar-telemetry-processor:
+    build:
+      context: ../telemetry-processor/oan-telemetry-dashboard-processor
+      dockerfile: Dockerfile
+    ports:
+      - "3333:3000"
+    environment:
+      PORT: 3000
+      LOG_MAX_SIZE: 10m
+      LOG_MAX_FILES: 14d
+      LOG_COMPRESS: "false"
+      BATCH_SIZE: 20000
+      CRON_SCHEDULE: "*/2 * * * *"
+      MV_REFRESH_SCHEDULE: "*/15 * * * *"
+      DB_USER: postgres
+      DB_PASSWORD: ASxf7654AS2#@a12
+      DB_HOST: 10.10.84.88
+      DB_NAME: vistaar-telemetry
+      DB_PORT: 5432
+    volumes:
+      - ../telemetry-processor-service/index.js:/usr/src/app/index.js
+      - ../telemetry-processor-service/eventProcessors.js:/usr/src/app/eventProcessors.js
+      - ../telemetry-processor-service/logger.js:/usr/src/app/logger.js
+      - ../telemetry-processor-service/logs:/usr/src/app/logs
+    restart: unless-stopped
+
+  vistaar-query-service:
+    build:
+      context: ../telemetry-query/oan-telemetry-dashboard-service
+      dockerfile: Dockerfile
+    ports:
+      - "3332:4000"
+    environment:
+      PORT: 4000
+      DB_USER: postgres
+      DB_PASSWORD: ASxf7654AS2#@a12
+      DB_HOST: 10.10.84.88
+      DB_NAME: vistaar-telemetry
+      DB_PORT: 5432
+      THRESHOLD_QUESTIONS_MIN: 20
+      THRESHOLD_FEEDBACK_MIN: 10
+      THRESHOLD_ERRORS_MAX: 100
+    volumes:
+      - ../telemetry-query-service/controllers:/usr/src/app/controllers
+      - ../telemetry-query-service/routes:/usr/src/app/routes
+      - ../telemetry-query-service/services:/usr/src/app/services
+      - ../telemetry-query-service/utils:/usr/src/app/utils
+      - ../telemetry-query-service/index.js:/usr/src/app/index.js
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  vistaar-chatbot-insight-dash:
+    build:
+      context: ../dashboard-ui/oan-telemetry-dashboard-app
+      dockerfile: Dockerfile
+    ports:
+      - "8881:8881"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8881"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  auth-service-keycloak:
+    image: quay.io/keycloak/keycloak:22.0
+    ports:
+      - "8889:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ELJoYnnjzeVQAi8
+      KC_HTTP_ENABLED: "false"
+      PROXY_ADDRESS_FORWARDING: "true"
+      KC_PROXY_ADDRESS_FORWARDING: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "true"
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY: edge
+      KC_HEALTH_ENABLED: "true"
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://10.10.84.88:5432/auth-service-dev-22?sslmode=require
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: ASxf7654AS2#@a12
+    command: start
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/auth/health/ready"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  smartstudy-ui-service:
+    build:
+      context: ../chatbot-ui/oan-ui-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8081"
+    restart: always
