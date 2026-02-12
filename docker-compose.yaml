@@ -12,16 +12,23 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 
   vistaar-telemetry:
-    image: ekstep-vistaar/telemetry-service
+    image: ekstep-vistaar/telemetry-service:latest
+    pull_policy: never
     ports:
       - "8181:8181"
     environment:
       postgres_url: postgres://postgres:ASxf7654AS2%23%40a12@postgres:5432/svara-telemetry
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: always
 
 
@@ -45,7 +52,8 @@ services:
       DB_NAME: svara-telemetry
       DB_PORT: 5432
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 
@@ -63,7 +71,8 @@ services:
       DB_NAME: svara-telemetry
       DB_PORT: 5432
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
@@ -95,21 +104,20 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: ELJoYnnjzeVQAi8
-      KC_HTTP_ENABLED: "false"
-      PROXY_ADDRESS_FORWARDING: "true"
-      KC_PROXY_ADDRESS_FORWARDING: "true"
-      KC_HOSTNAME_STRICT: "false"
-      KC_HOSTNAME_STRICT_HTTPS: "true"
-      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HTTP_ENABLED: "true"
       KC_PROXY: edge
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_HEALTH_ENABLED: "true"
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/auth_service
+      KC_DB_URL: jdbc:postgresql://postgres:5432/svara-telemetry
       KC_DB_USERNAME: postgres
       KC_DB_PASSWORD: ASxf7654AS2#@a12
     command: start
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/auth/health/ready"]
