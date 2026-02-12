@@ -1,5 +1,30 @@
 services:
 
+  postgres:
+    image: postgres:14
+    container_name: vistaar-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ASxf7654AS2#@a12
+      POSTGRES_DB: svara-telemetry
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+
+  vistaar-telemetry:
+    image: ekstep-vistaar/telemetry-service
+    ports:
+      - "8181:8181"
+    environment:
+      postgres_url: postgres://postgres:ASxf7654AS2%23%40a12@postgres:5432/svara-telemetry
+    depends_on:
+      - postgres
+    restart: always
+
+
   vistaar-telemetry-processor:
     build:
       context: ../telemetry-processor/oan-telemetry-dashboard-processor
@@ -16,10 +41,13 @@ services:
       MV_REFRESH_SCHEDULE: "*/15 * * * *"
       DB_USER: postgres
       DB_PASSWORD: ASxf7654AS2#@a12
-      DB_HOST: 10.10.84.00
-      DB_NAME: vistaar-telemetry
+      DB_HOST: postgres
+      DB_NAME: svara-telemetry
       DB_PORT: 5432
+    depends_on:
+      - postgres
     restart: unless-stopped
+
 
   vistaar-query-service:
     build:
@@ -31,9 +59,11 @@ services:
       PORT: 4000
       DB_USER: postgres
       DB_PASSWORD: ASxf7654AS2#@a12
-      DB_HOST: 10.10.84.00
-      DB_NAME: vistaar-telemetry
+      DB_HOST: postgres
+      DB_NAME: svara-telemetry
       DB_PORT: 5432
+    depends_on:
+      - postgres
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
@@ -41,6 +71,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
 
   vistaar-chatbot-insight-dash:
     build:
@@ -55,6 +86,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
 
   auth-service-keycloak:
     image: quay.io/keycloak/keycloak:22.0
@@ -72,10 +104,12 @@ services:
       KC_PROXY: edge
       KC_HEALTH_ENABLED: "true"
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://10.10.84.88:5432/auth-service-dev-22?sslmode=require
+      KC_DB_URL: jdbc:postgresql://postgres:5432/auth_service
       KC_DB_USERNAME: postgres
       KC_DB_PASSWORD: ASxf7654AS2#@a12
     command: start
+    depends_on:
+      - postgres
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/auth/health/ready"]
@@ -84,6 +118,7 @@ services:
       retries: 10
       start_period: 40s
 
+
   smartstudy-ui-service:
     build:
       context: ../chatbot-ui/oan-ui-service
@@ -91,3 +126,7 @@ services:
     ports:
       - "8001:8081"
     restart: always
+
+
+volumes:
+  postgres_data:
