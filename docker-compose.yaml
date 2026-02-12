@@ -2,7 +2,7 @@ services:
 
   vistaar-telemetry-processor:
     build:
-      context: ../../telemetry-processor/oan-telemetry-dashboard-processor
+      context: ../telemetry-processor/oan-telemetry-dashboard-processor
       dockerfile: Dockerfile
     ports:
       - "3333:3000"
@@ -20,15 +20,15 @@ services:
       DB_NAME: vistaar-telemetry
       DB_PORT: 5432
     volumes:
-      - ../telemetry-processor-service/index.js:/usr/src/app/index.js
-      - ../telemetry-processor-service/eventProcessors.js:/usr/src/app/eventProcessors.js
-      - ../telemetry-processor-service/logger.js:/usr/src/app/logger.js
-      - ../telemetry-processor-service/logs:/usr/src/app/logs
+      - ../telemetry-processor/oan-telemetry-dashboard-processor/index.js:/usr/src/app/index.js
+      - ../telemetry-processor/oan-telemetry-dashboard-processor/eventProcessors.js:/usr/src/app/eventProcessors.js
+      - ../telemetry-processor/oan-telemetry-dashboard-processor/logger.js:/usr/src/app/logger.js
+      - ../telemetry-processor/oan-telemetry-dashboard-processor/logs:/usr/src/app/logs
     restart: unless-stopped
 
   vistaar-query-service:
     build:
-      context: ../../telemetry-query/oan-telemetry-dashboard-service
+      context: ../telemetry-query/oan-telemetry-dashboard-service
       dockerfile: Dockerfile
     ports:
       - "3332:4000"
@@ -43,11 +43,11 @@ services:
       THRESHOLD_FEEDBACK_MIN: 10
       THRESHOLD_ERRORS_MAX: 100
     volumes:
-      - ../telemetry-query-service/controllers:/usr/src/app/controllers
-      - ../telemetry-query-service/routes:/usr/src/app/routes
-      - ../telemetry-query-service/services:/usr/src/app/services
-      - ../telemetry-query-service/utils:/usr/src/app/utils
-      - ../telemetry-query-service/index.js:/usr/src/app/index.js
+      - ../telemetry-query/oan-telemetry-dashboard-service/controllers:/usr/src/app/controllers
+      - ../telemetry-query/oan-telemetry-dashboard-service/routes:/usr/src/app/routes
+      - ../telemetry-query/oan-telemetry-dashboard-service/services:/usr/src/app/services
+      - ../telemetry-query/oan-telemetry-dashboard-service/utils:/usr/src/app/utils
+      - ../telemetry-query/oan-telemetry-dashboard-service/index.js:/usr/src/app/index.js
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
@@ -58,7 +58,7 @@ services:
 
   vistaar-chatbot-insight-dash:
     build:
-      context: ../../dashboard-ui/oan-telemetry-dashboard-app
+      context: ../dashboard-ui/oan-telemetry-dashboard-app
       dockerfile: Dockerfile
     ports:
       - "8881:8881"
@@ -100,7 +100,7 @@ services:
 
   smartstudy-ui-service:
     build:
-      context: ../../chatbot-ui/oan-ui-service
+      context: ../chatbot-ui/oan-ui-service
       dockerfile: Dockerfile
     ports:
       - "8001:8081"
