@@ -11,7 +11,7 @@ services:
     ports:
       - "8181:8181"
     environment:
-      postgres_url: postgres://postgres:ASxf7654AS2%23%40a12@postgres:5432/vistaar-telemetry
+      postgres_url: postgres://postgres:ASxf7654AS2%23%40a12@postgres:5432/vistaar-telemetry?sslmode=disable
     restart: always
 
   # ===============================
