@@ -1,37 +1,22 @@
+version: "3.9"
+
 services:
 
-  postgres:
-    image: postgres:14
-    container_name: vistaar-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ASxf7654AS2#@a12
-      POSTGRES_DB: svara-telemetry
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-
+  # ===============================
+  # TELEMETRY SERVICE (SCHEMA OWNER)
+  # ===============================
   vistaar-telemetry:
     image: ekstep-vistaar/telemetry-service:latest
     pull_policy: never
     ports:
       - "8181:8181"
     environment:
-      postgres_url: postgres://postgres:ASxf7654AS2%23%40a12@postgres:5432/svara-telemetry
-    depends_on:
-      postgres:
-        condition: service_healthy
+      postgres_url: postgres://postgres:ASxf7654AS2%23%40a12@postgres:5432/vistaar-telemetry
     restart: always
 
-
+  # ===============================
+  # TELEMETRY PROCESSOR (NO SCHEMA)
+  # ===============================
   vistaar-telemetry-processor:
     build:
       context: ../telemetry-processor/oan-telemetry-dashboard-processor
@@ -40,23 +25,19 @@ services:
       - "3333:3000"
     environment:
       PORT: 3000
-      LOG_MAX_SIZE: 10m
-      LOG_MAX_FILES: 14d
-      LOG_COMPRESS: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: ASxf7654AS2#@a12
+      DB_NAME: vistaar-telemetry
       BATCH_SIZE: 20000
       CRON_SCHEDULE: "*/2 * * * *"
       MV_REFRESH_SCHEDULE: "*/15 * * * *"
-      DB_USER: postgres
-      DB_PASSWORD: ASxf7654AS2#@a12
-      DB_HOST: postgres
-      DB_NAME: svara-telemetry
-      DB_PORT: 5432
-    depends_on:
-      postgres:
-        condition: service_healthy
     restart: unless-stopped
 
-
+  # ===============================
+  # QUERY SERVICE (READ ONLY)
+  # ===============================
   vistaar-query-service:
     build:
       context: ../telemetry-query/oan-telemetry-dashboard-service
@@ -65,14 +46,11 @@ services:
       - "3332:4000"
     environment:
       PORT: 4000
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: ASxf7654AS2#@a12
-      DB_HOST: postgres
-      DB_NAME: svara-telemetry
-      DB_PORT: 5432
-    depends_on:
-      postgres:
-        condition: service_healthy
+      DB_NAME: vistaar-telemetry
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
@@ -81,7 +59,9 @@ services:
       retries: 5
       start_period: 20s
 
-
+  # ===============================
+  # DASHBOARD UI
+  # ===============================
   vistaar-chatbot-insight-dash:
     build:
       context: ../dashboard-ui/oan-telemetry-dashboard-app
@@ -96,7 +76,9 @@ services:
       retries: 5
       start_period: 20s
 
-
+  # ===============================
+  # KEYCLOAK (SEPARATE DB)
+  # ===============================
   auth-service-keycloak:
     image: quay.io/keycloak/keycloak:22.0
     ports:
@@ -105,19 +87,16 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: ELJoYnnjzeVQAi8
       KC_HTTP_ENABLED: "true"
-      KC_PROXY: edge
       KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY: edge
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_HEALTH_ENABLED: "true"
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/svara-telemetry
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: postgres
       KC_DB_PASSWORD: ASxf7654AS2#@a12
     command: start
-    depends_on:
-      postgres:
-        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/auth/health/ready"]
@@ -126,7 +105,9 @@ services:
       retries: 10
       start_period: 40s
 
-
+  # ===============================
+  # SMARTSTUDY UI
+  # ===============================
   smartstudy-ui-service:
     build:
       context: ../chatbot-ui/oan-ui-service
@@ -134,7 +115,3 @@ services:
     ports:
       - "8001:8081"
     restart: always
-
-
-volumes:
-  postgres_data:
